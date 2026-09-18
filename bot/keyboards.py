@@ -109,12 +109,11 @@ def testlarim_klaviatura(royxat):
     ])
 
 
-def tolov_klaviatura(tolov_id, til):
-    """Admin chatiga yuboriladigan chek xabaridagi: tasdiqlash / rad etish."""
-    return InlineKeyboardMarkup([[
-        InlineKeyboardButton(t("tugma_tolov_tasdiqlash", til), callback_data=f"tolovtasdiq:{tolov_id}"),
-        InlineKeyboardButton(t("tugma_tolov_rad", til), callback_data=f"tolovrad:{tolov_id}"),
-    ]])
+def tolov_invoice_klaviatura(havola, til):
+    """To'lov so'rovidagi: Click sahifasiga o'tuvchi tugma. Bosilsa, talaba
+    Click'da to'laydi; tasdiqlangach Click bizning webhook'imizga xabar
+    beradi va xizmat AVTOMATIK ochiladi (admin aralashuvisiz)."""
+    return InlineKeyboardMarkup([[InlineKeyboardButton(t("tugma_tolovga_otish", til), url=havola)]])
 
 
 def asosiy_klaviatura(til, narx=None):

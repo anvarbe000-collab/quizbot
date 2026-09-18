@@ -367,82 +367,35 @@ _M = {
         "ru": "🚀 СТАРТ!",
         "en": "🚀 GO!",
     },
-    # --- To'lov (qo'lda tasdiqlash) ---
+    # --- To'lov (Click orqali avtomatik) ---
     "tolov_sorov": {
         "uz": "💳 <b>To'lov talab qilinadi</b>\n\n"
               "Fayldan test yaratish xizmati narxi: <b>{narx}</b>\n\n"
-              "Quyidagi kartaga o'tkazing:\n{karta}\n"
               "━━━━━━━━━━━━━━━━━━━\n"
-              "📸 To'lov qilgach, <b>chek yoki skrinshotni</b> shu yerga yuboring.\n"
-              "✅ Admin tasdiqlagach, faylingiz avtomatik qayta ishlanadi.",
+              "👇 Pastdagi tugmani bosib, Click orqali to'lang.\n"
+              "✅ To'lov o'tishi bilan faylingiz AVTOMATIK qayta ishlanadi — kutish shart emas.",
         "ru": "💳 <b>Требуется оплата</b>\n\n"
               "Стоимость услуги: <b>{narx}</b>\n\n"
-              "Переведите на карту:\n{karta}\n"
               "━━━━━━━━━━━━━━━━━━━\n"
-              "📸 После оплаты отправьте сюда <b>чек или скриншот</b>.\n"
-              "✅ После подтверждения администратором файл обработается автоматически.",
+              "👇 Нажмите кнопку ниже, чтобы оплатить через Click.\n"
+              "✅ Как только оплата пройдёт, файл обработается АВТОМАТИЧЕСКИ — ждать подтверждения не нужно.",
         "en": "💳 <b>Payment required</b>\n\n"
               "Price for creating a quiz from a file: <b>{narx}</b>\n\n"
-              "Transfer to this card:\n{karta}\n"
               "━━━━━━━━━━━━━━━━━━━\n"
-              "📸 After paying, send the <b>receipt or screenshot</b> here.\n"
-              "✅ Once the admin confirms, your file will be processed automatically.",
-    },
-    "chek_yuborildi": {
-        "uz": "✅ <b>Chekingiz qabul qilindi!</b>\n\n"
-              "Administratorga yuborildi. Tasdiqlangach, faylingiz avtomatik qayta ishlanadi.\n"
-              "⏳ Iltimos, biroz kuting.",
-        "ru": "✅ <b>Чек принят!</b>\n\n"
-              "Отправлен администратору. После подтверждения файл будет обработан автоматически.\n"
-              "⏳ Пожалуйста, подождите немного.",
-        "en": "✅ <b>Receipt received!</b>\n\n"
-              "It was sent to the admin. Once confirmed, your file will be processed automatically.\n"
-              "⏳ Please wait a bit.",
+              "👇 Press the button below to pay via Click.\n"
+              "✅ As soon as payment goes through, your file is processed AUTOMATICALLY — no waiting needed.",
     },
     "tolov_kutilmoqda_ogohlantirish": {
-        "uz": "⏳ Avvalgi faylingiz uchun to'lov hali tasdiqlanmagan. Iltimos, avval chek yuboring yoki tasdiqlanishini kuting.",
-        "ru": "⏳ Оплата за предыдущий файл ещё не подтверждена. Сначала отправьте чек или дождитесь подтверждения.",
-        "en": "⏳ Payment for your previous file hasn't been confirmed yet. Please send the receipt first or wait for confirmation.",
+        "uz": "⏳ Avvalgi faylingiz uchun to'lov hali tasdiqlanmagan. Iltimos, avval to'lovni yakunlang yoki tasdiqlanishini kuting.",
+        "ru": "⏳ Оплата за предыдущий файл ещё не подтверждена. Сначала завершите оплату или дождитесь подтверждения.",
+        "en": "⏳ Payment for your previous file hasn't been confirmed yet. Please finish that payment first or wait for confirmation.",
     },
     "tolov_tasdiqlandi_xabari": {
         "uz": "✅ <b>To'lov tasdiqlandi!</b>\n\nFaylingiz qayta ishlanmoqda... 🔄",
         "ru": "✅ <b>Оплата подтверждена!</b>\n\nВаш файл обрабатывается... 🔄",
         "en": "✅ <b>Payment confirmed!</b>\n\nYour file is being processed... 🔄",
     },
-    "tolov_rad_etildi_xabari": {
-        "uz": "❌ <b>Chek topilmadi</b>\n\nIltimos, to'lovni qayta tekshiring va chekni qaytadan yuboring.",
-        "ru": "❌ <b>Чек не найден</b>\n\nПожалуйста, проверьте оплату ещё раз и отправьте чек заново.",
-        "en": "❌ <b>Receipt not found</b>\n\nPlease double-check your payment and resend the receipt.",
-    },
-    "admin_chek_xabari": {
-        "uz": "💳 <b>Yangi to'lov cheki!</b>\n\n"
-              "👤 Talaba: {ism}\n"
-              "🆔 ID: <code>{uid}</code>\n"
-              "📄 Fayl: {fayl}\n\n"
-              "To'lovni tekshirib, tasdiqlang yoki rad eting 👇",
-        "ru": "💳 <b>Новый чек оплаты!</b>\n\n"
-              "👤 Студент: {ism}\n"
-              "🆔 ID: <code>{uid}</code>\n"
-              "📄 Файл: {fayl}\n\n"
-              "Проверьте оплату и подтвердите или отклоните 👇",
-        "en": "💳 <b>New payment receipt!</b>\n\n"
-              "👤 Student: {ism}\n"
-              "🆔 ID: <code>{uid}</code>\n"
-              "📄 File: {fayl}\n\n"
-              "Check the payment, then confirm or reject 👇",
-    },
-    "tolov_topilmadi": {
-        "uz": "Bu to'lov topilmadi.",
-        "ru": "Этот платёж не найден.",
-        "en": "This payment wasn't found.",
-    },
-    "admin_tolov_natija": {
-        "uz": "{belgi} <b>{ism}</b>",
-        "ru": "{belgi} <b>{ism}</b>",
-        "en": "{belgi} <b>{ism}</b>",
-    },
-    "tugma_tolov_tasdiqlash": {"uz": "✅ Tasdiqlash", "ru": "✅ Подтвердить", "en": "✅ Confirm"},
-    "tugma_tolov_rad": {"uz": "❌ Rad etish", "ru": "❌ Отклонить", "en": "❌ Reject"},
+    "tugma_tolovga_otish": {"uz": "💳 To'lovga o'tish", "ru": "💳 Перейти к оплате", "en": "💳 Go to payment"},
     "tugma_fayldan_test_pullik": {
         "uz": "📎 Fayldan test yaratish — {narx}",
         "ru": "📎 Создать тест из файла — {narx}",

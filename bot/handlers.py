@@ -40,6 +40,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from telegram.constants import PollType
 
+import click_pay
 import config
 import db
 from fayl.oqi import matn_ol
@@ -47,7 +48,7 @@ from ai.parse import testlarni_ajrat, AIXato
 from bot.matnlar import t, STANDART_TIL
 from bot.keyboards import (nechta_klaviatura, tartib_klaviatura, soniya_klaviatura,
                            tayyor_klaviatura, davom_klaviatura, yakuniy_klaviatura,
-                           til_klaviatura, testlarim_klaviatura, tolov_klaviatura,
+                           til_klaviatura, testlarim_klaviatura, tolov_invoice_klaviatura,
                            asosiy_klaviatura)
 
 log = logging.getLogger(__name__)
@@ -185,8 +186,10 @@ async def stop_komandasi(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 async def fayl_qabul(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Fayl qabul qilinganda: agar to'lov YOQILGAN bo'lsa va yuboruvchi
-    admin bo'lmasa — faylni saqlab, to'lov so'raymiz (haqiqiy ishlov
-    to'lov TASDIQLANGANDAN keyin boshlanadi). Aks holda darhol ishlanadi."""
+    admin bo'lmasa — faylni saqlab, Click orqali to'lov havolasini
+    beramiz (haqiqiy ishlov Click "Complete" webhook orqali TASDIQLANGANDAN
+    keyin AVTOMATIK boshlanadi — admin aralashuvi kerak emas). Aks holda
+    darhol ishlanadi."""
     uid = update.effective_user.id
     til = await _til(ctx, uid)
     doc = update.message.document
@@ -205,20 +208,18 @@ async def fayl_qabul(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     kutilayotgan_id = ctx.user_data.get("tolov_id")
     if kutilayotgan_id:
         kutilayotgan = await db.tolov_olish(kutilayotgan_id)
-        if kutilayotgan and kutilayotgan["holat"] in ("kutilmoqda", "chek_yuborildi"):
+        if kutilayotgan and kutilayotgan["holat"] in ("kutilmoqda", "tayyorlangan"):
             await update.message.reply_text(t("tolov_kutilmoqda_ogohlantirish", til))
             return
 
     tolov_id = uuid.uuid4().hex[:10]
     await db.tolov_yaratish(tolov_id, uid, update.effective_user.full_name,
-                            doc.file_name, fayl_baytlari, time.time())
+                            doc.file_name, fayl_baytlari, config.TOLOV_NARXI, time.time())
     ctx.user_data["tolov_id"] = tolov_id
-    karta_bloki = f"💳 <code>{_esc(config.TOLOV_KARTA)}</code>"
-    if config.TOLOV_KARTA_EGASI:
-        karta_bloki += f"\n👤 {_esc(config.TOLOV_KARTA_EGASI)}"
+    havola = click_pay.invoice_url(tolov_id, config.TOLOV_NARXI)
     await update.message.reply_text(
-        t("tolov_sorov", til, narx=_esc(config.TOLOV_NARXI), karta=karta_bloki),
-        parse_mode="HTML")
+        t("tolov_sorov", til, narx=_esc(config.TOLOV_NARXI)),
+        reply_markup=tolov_invoice_klaviatura(havola, til), parse_mode="HTML")
 
 
 async def _faylni_qayta_ishlash(ctx: ContextTypes.DEFAULT_TYPE, uid: int, chat_id: int,
@@ -269,93 +270,45 @@ async def _faylni_qayta_ishlash(ctx: ContextTypes.DEFAULT_TYPE, uid: int, chat_i
     await kutish.edit_text(xabar, reply_markup=nechta_klaviatura(len(testlar), til))
 
 
-async def chek_qabul(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Talaba to'lov cheki/skrinshotini (rasm yoki fayl) yuborganda —
-    faqat shu foydalanuvchining KUTILAYOTGAN to'lovi bo'lsagina ishlaydi
-    (aks holda oddiy rasm sifatida e'tiborsiz qoldiriladi)."""
-    uid = update.effective_user.id
-    til = await _til(ctx, uid)
-    tolov_id = ctx.user_data.get("tolov_id")
-    if not tolov_id:
-        return
+class _KontekstSimulyatori:
+    """Click webhook (aiohttp) kabi PTB Update oqimidan TASHQARIDA turgan
+    kod uchun ctx-ga o'xshash minimal obyekt — _til()/_faylni_qayta_ishlash()
+    kabi funksiyalarni O'ZGARTIRMASDAN qayta ishlatish imkonini beradi.
+    user_data — aynan shu FOYDALANUVCHI (uid) uchun bo'lgan bo'lak, chunki
+    webhook allaqachon "kim uchun" ekanini biladi (PTB Update'dan farqli)."""
+    def __init__(self, application, uid: int):
+        self.bot = application.bot
+        self.bot_data = application.bot_data
+        self.application = application
+        self.user_data = application.user_data[uid]
+
+
+async def click_tolov_muvaffaqiyatli(application, tolov_id: str):
+    """Click "Complete" webhook to'lovni TASDIQLAGANDA chaqiriladi (aiohttp
+    handler ichidan, click_pay.complete() orqali) — talabaga xabar beradi
+    va faylni AVTOMATIK ishga tushiradi (admin aralashuvisiz)."""
     tolov = await db.tolov_olish(tolov_id)
-    if not tolov or tolov["holat"] == "tasdiqlangan":
-        return
-
-    await db.tolov_holatini_yangilash(tolov_id, "chek_yuborildi")
-
-    rasm_file_id = None
-    if update.message.photo:
-        rasm_file_id = update.message.photo[-1].file_id
-    elif update.message.document:
-        rasm_file_id = update.message.document.file_id
-
-    admin_til = await _til(ctx, config.ADMIN_CHAT_ID)
-    izoh = t("admin_chek_xabari", admin_til, ism=_esc(tolov["ism"]), uid=uid, fayl=_esc(tolov["fayl_nomi"]))
-    klaviatura = tolov_klaviatura(tolov_id, admin_til)
-    try:
-        if rasm_file_id:
-            await ctx.bot.send_photo(config.ADMIN_CHAT_ID, rasm_file_id, caption=izoh,
-                                     reply_markup=klaviatura, parse_mode="HTML")
-        else:
-            await ctx.bot.send_message(config.ADMIN_CHAT_ID, izoh, reply_markup=klaviatura, parse_mode="HTML")
-    except Exception:
-        log.exception("adminga chek yuborishda xato")
-
-    await update.message.reply_text(t("chek_yuborildi", til), parse_mode="HTML")
-
-
-async def _tolov_xabarini_almashtir(xabar, matn):
-    """Admin chatidagi chek xabarini (rasm bo'lsa caption, aks holda matn)
-    yangi holatga o'zgartiradi."""
-    try:
-        if xabar.photo:
-            await xabar.edit_caption(matn, parse_mode="HTML")
-        else:
-            await xabar.edit_text(matn, parse_mode="HTML")
-    except Exception:
-        pass
-
-
-async def tolov_tasdiqlandi(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Admin "✅ Tasdiqlash" bosganda — talabaga xabar beriladi va
-    fayli ishlanadi (nechtadan/tartib/soniya oqimi talabaning o'z
-    chatida davom etadi)."""
-    q = update.callback_query
-    await q.answer()
-    if config.ADMIN_CHAT_ID and q.from_user.id != config.ADMIN_CHAT_ID:
-        return
-    tolov_id = q.data.split(":", 1)[1]
-    tolov = await db.tolov_olish(tolov_id)
-    admin_til = await _til(ctx, q.from_user.id)
     if not tolov:
-        await q.message.reply_text(t("tolov_topilmadi", admin_til))
+        log.error("click_tolov_muvaffaqiyatli: to'lov topilmadi id=%s", tolov_id)
         return
-    await db.tolov_holatini_yangilash(tolov_id, "tasdiqlangan")
-    await _tolov_xabarini_almashtir(q.message, t("admin_tolov_natija", admin_til, belgi="✅", ism=_esc(tolov["ism"])))
+    ctx = _KontekstSimulyatori(application, tolov["uid"])
+    til = await _til(ctx, tolov["uid"])
+    try:
+        await application.bot.send_message(
+            tolov["uid"], t("tolov_tasdiqlandi_xabari", til), parse_mode="HTML")
+    except Exception:
+        log.exception("talabaga to'lov xabarini yuborishda xato")
 
-    talaba_til = await _til(ctx, tolov["uid"])
-    await ctx.bot.send_message(tolov["uid"], t("tolov_tasdiqlandi_xabari", talaba_til), parse_mode="HTML")
-    await _faylni_qayta_ishlash(ctx, tolov["uid"], tolov["uid"], tolov["fayl_nomi"], tolov["fayl_bayt"], talaba_til)
+    await _faylni_qayta_ishlash(ctx, tolov["uid"], tolov["uid"], tolov["fayl_nomi"], tolov["fayl_bayt"], til)
 
-
-async def tolov_radetildi(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Admin "❌ Rad etish" bosganda — talabaga qayta tekshirish so'raladi."""
-    q = update.callback_query
-    await q.answer()
-    if config.ADMIN_CHAT_ID and q.from_user.id != config.ADMIN_CHAT_ID:
-        return
-    tolov_id = q.data.split(":", 1)[1]
-    tolov = await db.tolov_olish(tolov_id)
-    admin_til = await _til(ctx, q.from_user.id)
-    if not tolov:
-        await q.message.reply_text(t("tolov_topilmadi", admin_til))
-        return
-    await db.tolov_holatini_yangilash(tolov_id, "rad_etilgan")
-    await _tolov_xabarini_almashtir(q.message, t("admin_tolov_natija", admin_til, belgi="❌", ism=_esc(tolov["ism"])))
-
-    talaba_til = await _til(ctx, tolov["uid"])
-    await ctx.bot.send_message(tolov["uid"], t("tolov_rad_etildi_xabari", talaba_til), parse_mode="HTML")
+    if config.ADMIN_CHAT_ID:
+        try:
+            await application.bot.send_message(
+                config.ADMIN_CHAT_ID,
+                f"💰 To'lov qabul qilindi: {_esc(tolov['ism'])} — {tolov['narxi']} so'm",
+                parse_mode="HTML")
+        except Exception:
+            log.exception("adminga to'lov haqida xabar berishda xato")
 
 
 async def nechta_tanlandi(update: Update, ctx: ContextTypes.DEFAULT_TYPE):

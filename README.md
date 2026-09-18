@@ -3,11 +3,13 @@
 O'qituvchi bergan Word/PDF test faylini avtomatik Telegram testiga (Quiz)
 aylantiradi, xohlagan o'lchamdagi mustaqil to'plamlarga bo'ladi va
 @QuizBot uslubida o'ynatadi (sanoq bilan boshlash, vaqt chegarasi, reyting,
-ulashish havolasi). Ixtiyoriy ravishda qo'lda tasdiqlanadigan to'lov bilan.
+ulashish havolasi). Ixtiyoriy ravishda Click (click.uz) orqali AVTOMATIK
+to'lov bilan — admin aralashuvisiz.
 
 ## Oqim
-Fayl (.docx/.pdf) yuboriladi -> (to'lov yoqilgan bo'lsa: karta ko'rsatiladi,
-chek/skrinshot kutiladi, admin tasdiqlaydi) -> matn olinadi -> testlar
+Fayl (.docx/.pdf) yuboriladi -> (to'lov yoqilgan bo'lsa: Click to'lov
+havolasi beriladi, talaba to'laydi, Click webhook orqali AVTOMATIK
+tasdiqlaydi) -> matn olinadi -> testlar
 ajratiladi (avval AI'siz shablon orqali — raqamli, jadvalli, a/b/c/d,
 bo'sh qator bilan ajratilgan formatlar, jadval katagi ichidagi savollar;
 javob rangli belgi/`*`/✓/"Javob: B"/hujjat oxiridagi umumiy javob kaliti
@@ -28,18 +30,27 @@ ketilgan, vaqt, reyting).
   to'liq vaqt kutiladi (hamma ulgurishi uchun).
 - Ketma-ket 3 ta savolga javob kelmasa test avtomatik to'xtaydi.
 
-## To'lov (ixtiyoriy, qo'lda tasdiqlash)
-`.env`da `ADMIN_CHAT_ID` va `TOLOV_KARTA` ikkalasi ham to'ldirilsa yoqiladi
-(bo'lmasa xizmat bepul ishlayveradi). `TOLOV_KARTA_EGASI` ixtiyoriy (karta
-egasining F.I.Sh.) — to'ldirilsa, to'lov xabarida karta raqami ostida
-alohida ko'rsatiladi. Yoqilganda: talaba fayl yuborsa, bot karta raqami
-(bosib nusxa olinadigan) va narxni professional ko'rinishda ko'rsatib
-chek/skrinshot so'raydi; talaba yuborgan skrinshot ADMIN_CHAT_ID'ga
-(rasm + "✅ Tasdiqlash"/"❌ Rad etish" tugmalari bilan) boradi; admin
-tasdiqlasa — fayl avtomatik ishlanadi va talabaga xabar boradi; rad etsa —
-talaba qayta tekshirishga yo'naltiriladi. Admin (ADMIN_CHAT_ID) o'zi fayl
-yuborganda to'lov so'ralmaydi. ADMIN_CHAT_ID'ni olish uchun: @userinfobot
-ga /start yuboring.
+## To'lov (ixtiyoriy, Click orqali AVTOMATIK)
+`.env`da `CLICK_SERVICE_ID`, `CLICK_SECRET_KEY`, `CLICK_MERCHANT_ID` va
+`TOLOV_NARXI` to'liq bo'lsa yoqiladi (bo'lmasa xizmat bepul ishlayveradi).
+Yoqilganda: talaba fayl yuborsa, bot Click to'lov sahifasiga o'tuvchi
+tugma beradi; talaba shu yerda to'laydi; Click to'lov haqiqiyligini
+tasdiqlash uchun bizning webhook manzilimizga (`CLICK_WEBHOOK_HOST:
+CLICK_WEBHOOK_PORT/click/webhook`) 2 ta so'rov yuboradi (Prepare, so'ng
+Complete) — bular MD5 imzo bilan tekshiriladi. Complete muvaffaqiyatli
+bo'lishi bilan fayl AVTOMATIK ishlanadi va talabaga xabar boradi — admin
+hech qanday tugma bosishi shart emas. Admin (ADMIN_CHAT_ID) o'zi fayl
+yuborganda to'lov so'ralmaydi; ADMIN_CHAT_ID berilsa, har muvaffaqiyatli
+to'lov haqida adminga ham xabar boradi (ixtiyoriy, faqat bildirishnoma
+uchun). ADMIN_CHAT_ID'ni olish uchun: @userinfobot ga /start yuboring.
+
+**MUHIM — tarmoq talabi:** Click serverlari `CLICK_WEBHOOK_HOST:
+CLICK_WEBHOOK_PORT` manziliga INTERNET orqali ulana olishi kerak. Bu
+kompyuter (Windows PC) uchun bu portni tashqariga chiqarish (router'da
+port forwarding, statik/oq IP, yoki test uchun ngrok kabi tunnel vositasi)
+zarur — aks holda Click to'lovni "Prepare/Complete" qilib bo'lmaydi va
+xizmat avtomatik ochilmaydi. Ishlab chiqarishda buni doimiy ishlaydigan
+serverga (VPS) joylashtirish tavsiya etiladi.
 
 ## Botning START oldidan ko'rinishi
 Bot birinchi ishga tushganda (`post_init`) o'zining tavsifini (START
@@ -56,15 +67,19 @@ chiqadi (to'lov yoqilgan bo'lsa — narxi bilan birga).
 - `ai/parse.py` — shablon + (kerak bo'lsagina) AI orqali ajratish
 - `db.py` — SQLite: viktorinalar, reyting, foydalanuvchi tili, to'lovlar
   (bot qayta ishga tushirilsa ham saqlanib qoladi — `bot.db` fayli)
+- `click_pay.py` — Click (click.uz) Merchant Shop-API: invoice havolasi +
+  Prepare/Complete webhook'larini MD5 imzo bilan tekshirish
 - `bot/matnlar.py` — barcha matnlar 3 tilda (uz/ru/en)
 - `bot/` — fayl qabul, to'lov, to'plam/tartib/vaqt tanlash, poll yuborish, natija
-- `main.py` — ishga tushirish, "/" buyruqlar menyusi
+- `main.py` — ishga tushirish: PTB polling + Click webhook uchun aiohttp
+  serveri BIR XIL event loop'da birga ishga tushadi
 
 ## O'rnatish
 1) python -m venv venv && (venv faollashtiring)
 2) pip install -r requirements.txt
 3) .env: TEST_BOT_TOKEN (BotFather), AI_API_KEY (Gemini)
-4) (ixtiyoriy) .env: ADMIN_CHAT_ID, TOLOV_KARTA, TOLOV_KARTA_EGASI, TOLOV_NARXI — to'lovni yoqish uchun
+4) (ixtiyoriy) .env: CLICK_SERVICE_ID, CLICK_SECRET_KEY, CLICK_MERCHANT_ID,
+   TOLOV_NARXI, ADMIN_CHAT_ID, CLICK_WEBHOOK_HOST/PORT — to'lovni yoqish uchun
 5) python main.py
 
 Birinchi ishga tushirishda loyiha papkasida `bot.db` (SQLite) avtomatik
